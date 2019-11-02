@@ -1,8 +1,5 @@
-import keyboard
 from PyQt5 import QtGui, QtWidgets, QtCore
-from TileEnum import Tile
 from MapGenerator import MapGen
-from PyQt5.QtCore import QRect
 from PyQt5.QtGui import QColor, QPainter
 import PyQt5
 import pyautogui
@@ -13,7 +10,7 @@ from MapSetting import MapSetting
 black_color = '#000000'
 white_color = '#ffffff'
 MAPSIZE = 600
-TILESIZE = 0.05 #0.05 max
+TILESIZE = 0.07 #0.07 max, 0.05 jak znajdę czemu się robią dziury w ścieżkach
 
 
 class Canvas(QtWidgets.QLabel):
@@ -48,10 +45,14 @@ class Canvas(QtWidgets.QLabel):
             pointY = pointY + round(MAPSIZE * TILESIZE)
         painter.end()
 
+def is_pointer_on_color(rgb, e):
+    return pyautogui.pixelMatchesColor(e.globalPos().x(), e.globalPos().y(), rgb, 10)
 
 def is_pointer_on_black_pixel(e):
-    return pyautogui.pixelMatchesColor(e.globalPos().x(), e.globalPos().y(), QColor('black').getRgb(), 10)
+    return is_pointer_on_color(QColor('black').getRgb(), e)
 
+def is_pointer_on_green_pixel(e):
+    return is_pointer_on_color(QColor('green').getRgb(), e)
 
 class Map(QtWidgets.QMainWindow):
 
@@ -71,6 +72,7 @@ class Map(QtWidgets.QMainWindow):
         super().__init__()
         self.__generate_map()
         self.setMouseTracking(True)
+        self.score = 0
 
     def __center(self):
         frame_gm = self.frameGeometry()
@@ -85,9 +87,13 @@ class Map(QtWidgets.QMainWindow):
                           self.mapToGlobal(self.centralWidget().pos()).y() - 8 + round(MAPSIZE * TILESIZE))
         pyautogui.moveTo(self.act_pos)
 
+    def __set_score_text(self):
+        self.setWindowTitle("MouseRunner - Wynik: %d" % self.score)
+
     def __new_game(self):
         self.__generate_map()
         self.__set_start_pos_pointer()
+        self.__set_score_text()
         self.update()
 
     def show(self):
@@ -100,14 +106,16 @@ class Map(QtWidgets.QMainWindow):
         val = numpy.abs(numpy.subtract(self.act_pos, tmp_pos))
         return any(val > (MAPSIZE * TILESIZE))
 
-
     def mouseMoveEvent(self, e):
-        if is_pointer_on_black_pixel(e):
+        if is_pointer_on_black_pixel(e) or self.__did_pointer_jump(e):
+            self.score = self.score - 1
             self.__new_game()
-        elif self.__did_pointer_jump(e):
+        elif is_pointer_on_green_pixel(e):
+            self.score = self.score + 1
             self.__new_game()
         else:
             self.act_pos = (e.globalPos().x(), e.globalPos().y())
 
     def keyPressEvent(self, ev):
-        self.__new_game()
+        if ev.key() == QtCore.Qt.Key_R:
+            self.__new_game()
