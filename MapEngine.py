@@ -10,7 +10,7 @@ from MapSetting import MapSetting
 black_color = '#000000'
 white_color = '#ffffff'
 MAPSIZE = 600
-TILESIZE = 0.07 #0.07 max, 0.05 jak znajdę czemu się robią dziury w ścieżkach
+TILESIZE = 0.05 #0.07 max, 0.05 jak znajdę czemu się robią dziury w ścieżkach
 
 
 class Canvas(QtWidgets.QLabel):

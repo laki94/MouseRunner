@@ -1,4 +1,6 @@
 import random
+import numpy
+import os
 
 
 class MapGen:
@@ -155,14 +157,27 @@ class MapGen:
         self.fields[self.size - 1][self.size - 1] = 3
 
     def generate_map(self):
+        try:
+            os.remove("D:\\Projekty\\Python\\MouseRunner\\aa.txt")
+        except FileNotFoundError:
+            pass
         while True:
             self.__get_possible_moves()
             self.__make_move()
+            f = open("D:\\Projekty\\Python\\MouseRunner\\aa.txt", 'ab')
+            numpy.savetxt(f, self.fields, '%d')
+            f.write(b"\n")
+            f.close()
+            # numpy.savetxt() ("D:\\Projekty\\Python\\MouseRunner\\aa.txt", self.fields, '%d')
             for i in self.fields:
                 print(i)
             if self.__maze_ended():
                 break
         self.__finish_maze()
+        f = open("D:\\Projekty\\Python\\MouseRunner\\aa.txt", 'ab')
+        numpy.savetxt(f, self.fields, '%d')
+        f.write(b"\n")
+        f.close()
         for i in self.fields:
             print(i)
         return self.fields
