@@ -10,7 +10,7 @@ from MapSetting import MapSetting
 black_color = '#000000'
 white_color = '#ffffff'
 MAPSIZE = 600
-TILESIZE = 0.05 #0.07 max, 0.05 jak znajdę czemu się robią dziury w ścieżkach
+TILESIZE = 0.05
 
 
 class Canvas(QtWidgets.QLabel):
@@ -106,7 +106,7 @@ class Map(QtWidgets.QMainWindow):
         val = numpy.abs(numpy.subtract(self.act_pos, tmp_pos))
         return any(val > (MAPSIZE * TILESIZE))
 
-    def mouseMoveEvent(self, e):
+    def mouseMoveEvent(self, e): # TODO informacja o ładowaniu mapy
         if is_pointer_on_black_pixel(e) or self.__did_pointer_jump(e):
             self.score = self.score - 1
             self.__new_game()
