@@ -151,6 +151,8 @@ class MapGen:
         print("maze ended")
         self.fields[self.size - 1][self.size - 1] = 1
         self.__clear_maze()
+        self.fields[0][0] = 2
+        self.fields[self.size - 1][self.size - 1] = 3
 
     def generate_map(self):
         while True:

@@ -1,8 +1,11 @@
-from PyQt5 import QtGui, QtWidgets
+import keyboard
+from PyQt5 import QtGui, QtWidgets, QtCore
 from TileEnum import Tile
 from MapGenerator import MapGen
 from PyQt5.QtCore import QRect
 from PyQt5.QtGui import QColor, QPainter
+import PyQt5
+import pyautogui
 
 from MapSetting import MapSetting
 
@@ -30,13 +33,13 @@ class Canvas(QtWidgets.QLabel):
         for i in tiles:
             for j in i:
                 if j == 0:
-                    pen.setColor(QtGui.QColor('white'))
-                elif j == 1:
                     pen.setColor(QtGui.QColor('black'))
+                elif j == 1:
+                    pen.setColor(QtGui.QColor('white'))
                 elif j == 2:
                     pen.setColor(QtGui.QColor('red'))
-                else:
-                    pen.setColor(QtGui.QColor('blue'))
+                elif j == 3:
+                    pen.setColor(QtGui.QColor('green'))
                 painter.setPen(pen)
                 painter.drawPoint(pointX, pointY)
                 pointX = pointX + round(MAPSIZE * TILESIZE)
@@ -45,22 +48,54 @@ class Canvas(QtWidgets.QLabel):
         painter.end()
 
 
+def is_pointer_on_black_pixel(e):
+    return pyautogui.pixelMatchesColor(e.globalPos().x(), e.globalPos().y(), QColor('black').getRgb(), 10)
+
+
 class Map(QtWidgets.QMainWindow):
 
-    def generatemap(self):
+    def __generate_map(self):
         generated = MapGen(round(MAPSIZE / (MAPSIZE * TILESIZE)))
         stage1 = MapSetting("Stage 1", generated.generate_map())
         self.canvas = Canvas()
-        self.title = QtWidgets.QLabel()
-        self.title.setText(stage1.map_name)
         self.canvas.draw_map(stage1.tiles)
         self.l = QtWidgets.QVBoxLayout()
         w = QtWidgets.QWidget()
         w.setLayout(self.l)
-        self.l.addWidget(self.title)
         self.l.addWidget(self.canvas)
         self.setCentralWidget(w)
+        w.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
     def __init__(self, ):
         super().__init__()
-        self.generatemap()
+        self.__generate_map()
+        self.setMouseTracking(True)
+
+    def __center(self):
+        frame_gm = self.frameGeometry()
+        screen = PyQt5.QtWidgets.QApplication.desktop().screenNumber(
+            PyQt5.QtWidgets.QApplication.desktop().cursor().pos())
+        center_point = PyQt5.QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+        frame_gm.moveCenter(center_point)
+        self.move(frame_gm.topLeft())
+
+    def __set_start_pos_pointer(self):
+        pyautogui.moveTo(self.mapToGlobal(self.centralWidget().pos()).x() - 8 + round(MAPSIZE * TILESIZE),
+                         self.mapToGlobal(self.centralWidget().pos()).y() - 8 + round(MAPSIZE * TILESIZE))
+
+    def __new_game(self):
+        self.__generate_map()
+        self.__set_start_pos_pointer()
+        self.update()
+
+    def show(self):
+        super(Map, self).show()
+        self.__center()
+        self.__new_game()
+
+    def mouseMoveEvent(self, e):
+        if is_pointer_on_black_pixel(e):
+            self.__new_game()
+
+    def keyPressEvent(self, ev):
+        self.__new_game()
