@@ -6,6 +6,7 @@ from PyQt5.QtCore import QRect
 from PyQt5.QtGui import QColor, QPainter
 import PyQt5
 import pyautogui
+import numpy
 
 from MapSetting import MapSetting
 
@@ -80,8 +81,9 @@ class Map(QtWidgets.QMainWindow):
         self.move(frame_gm.topLeft())
 
     def __set_start_pos_pointer(self):
-        pyautogui.moveTo(self.mapToGlobal(self.centralWidget().pos()).x() - 8 + round(MAPSIZE * TILESIZE),
-                         self.mapToGlobal(self.centralWidget().pos()).y() - 8 + round(MAPSIZE * TILESIZE))
+        self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() - 8 + round(MAPSIZE * TILESIZE),
+                          self.mapToGlobal(self.centralWidget().pos()).y() - 8 + round(MAPSIZE * TILESIZE))
+        pyautogui.moveTo(self.act_pos)
 
     def __new_game(self):
         self.__generate_map()
@@ -93,9 +95,19 @@ class Map(QtWidgets.QMainWindow):
         self.__center()
         self.__new_game()
 
+    def __did_pointer_jump(self, e):
+        tmp_pos = (e.globalPos().x(), e.globalPos().y())
+        val = numpy.abs(numpy.subtract(self.act_pos, tmp_pos))
+        return any(val > (MAPSIZE * TILESIZE))
+
+
     def mouseMoveEvent(self, e):
         if is_pointer_on_black_pixel(e):
             self.__new_game()
+        elif self.__did_pointer_jump(e):
+            self.__new_game()
+        else:
+            self.act_pos = (e.globalPos().x(), e.globalPos().y())
 
     def keyPressEvent(self, ev):
         self.__new_game()
