@@ -12,16 +12,16 @@ class MapGen:
         self.validFields = []
 
     def __can_go_left(self):
-        return (self.actX != 0) and (self.fields[self.actY][self.actX - 1] == 0) and (((self.actY == 0) or (self.fields[self.actY - 1][self.actX - 1] == 0)) and ((self.actY == self.size - 1) or (self.fields[self.actY + 1][self.actX - 1] == 0)) and ((self.actX < 1) or (self.fields[self.actY][self.actX - 2] == 0)))
+        return (self.actX != 0) and (self.fields[self.actY][self.actX - 1] == 0) and (((self.actY == 0) or (self.fields[self.actY - 1][self.actX - 1] == 0)) and ((self.actY == self.size - 1) or (self.fields[self.actY + 1][self.actX - 1] == 0)) and ((self.actX < 1) or (self.fields[self.actY][self.actX - 2] == 0))) and ((self.actX != self.size - 2) or (self.actY != self.size - 2))
 
     def __can_go_right(self):
-        return (self.actX != (self.size - 1)) and (self.fields[self.actY][self.actX + 1] == 0) and (((self.actY == 0) or (self.fields[self.actY - 1][self.actX + 1] == 0)) and ((self.actY == self.size - 1) or (self.fields[self.actY + 1][self.actX + 1] == 0)) and ((self.size - self.actX < 3) or self.fields[self.actY][self.actX + 2] == 0))
+        return (self.actX != (self.size - 1)) and (self.fields[self.actY][self.actX + 1] == 0) and (((self.actY == 0) or (self.fields[self.actY - 1][self.actX + 1] == 0)) and ((self.actY == self.size - 1) or (self.fields[self.actY + 1][self.actX + 1] == 0)) and ((self.size - self.actX < 3) or self.fields[self.actY][self.actX + 2] == 0)) or ((self.actX == self.size - 2) and (self.actY == self.size - 2))
 
     def __can_go_up(self):
-        return (self.actY != 0) and (self.fields[self.actY - 1][self.actX] == 0) and (((self.actX == 0) or (self.fields[self.actY - 1][self.actX - 1] == 0)) and ((self.actX == (self.size - 1)) or (self.fields[self.actY - 1][self.actX + 1] == 0)) and ((self.actY < 1) or (self.fields[self.actY - 2][self.actX] == 0)))
+        return (self.actY != 0) and (self.fields[self.actY - 1][self.actX] == 0) and (((self.actX == 0) or (self.fields[self.actY - 1][self.actX - 1] == 0)) and ((self.actX == (self.size - 1)) or (self.fields[self.actY - 1][self.actX + 1] == 0)) and ((self.actY < 1) or (self.fields[self.actY - 2][self.actX] == 0))) and ((self.actX != self.size - 2) or (self.actY != self.size - 2))
 
     def __can_go_down(self):
-        return (self.actY != (self.size - 1)) and (self.fields[self.actY + 1][self.actX] == 0) and (((self.actX == 0) or (self.fields[self.actY + 1][self.actX - 1] == 0)) and ((self.actX == (self.size - 1)) or (self.fields[self.actY + 1][self.actX + 1] == 0)) and ((self.size - self.actY < 3) or (self.fields[self.actY + 2][self.actX] == 0)))
+        return (self.actY != (self.size - 1)) and (self.fields[self.actY + 1][self.actX] == 0) and (((self.actX == 0) or (self.fields[self.actY + 1][self.actX - 1] == 0)) and ((self.actX == (self.size - 1)) or (self.fields[self.actY + 1][self.actX + 1] == 0)) and ((self.size - self.actY < 3) or (self.fields[self.actY + 2][self.actX] == 0))) or ((self.actX == self.size - 2) and (self.actY == self.size - 2))
 
     def __get_possible_moves(self):
         self.validFields.clear()
@@ -76,11 +76,6 @@ class MapGen:
             self.fields[self.actY][self.actX] = 1
         else:
             self.fields[self.actY][self.actX] = self.fields[self.actY][self.actX] + 1
-            # obsługa błedu
-            if self.fields[self.actY][self.actX] > 50:
-                self.fields = [[0 for x in range(self.size)] for y in range(self.size)]
-                self.fields[0][0] = 1
-                self.actX, self.actY = 0, 0
 
     def __maze_ended(self):
         return ((self.actX == self.size - 2) and (self.actY == self.size - 1)) or ((self.actX == self.size - 1) and (self.actY == self.size - 2))
