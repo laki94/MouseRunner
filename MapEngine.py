@@ -198,6 +198,9 @@ class Map(QtWidgets.QMainWindow):
                 self.act_pos = (e.globalPos().x(), e.globalPos().y())
 
     def keyPressEvent(self, ev):
-        if ev.key() == QtCore.Qt.Key_R:
-            self.canvas.show_loading_map_info()
-            self.__do_on_new_game()
+        if self.generating_map:
+            pass
+        else:
+            if ev.key() == QtCore.Qt.Key_R:
+                self.canvas.show_loading_map_info()
+                self.__do_on_new_game()
