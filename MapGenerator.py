@@ -72,10 +72,12 @@ class MapGen:
         self.actX = nextField[0]
         self.actY = nextField[1]
         print("choosen field ", [self.actX, self.actY])
-        if self.fields[self.actY][self.actX] == 0:
-            self.fields[self.actY][self.actX] = 1
-        else:
-            self.fields[self.actY][self.actX] = self.fields[self.actY][self.actX] + 1
+        self.fields[self.actY][self.actX] = self.fields[self.actY][self.actX] + 1
+        # w razie nieobsługiwanego błedu
+        if self.fields[self.actY][self.actX] > 50:
+            self.fields = [[0 for x in range(self.size)] for y in range(self.size)]
+            self.fields[0][0] = 1
+            self.actX, self.actY = 0, 0
 
     def __maze_ended(self):
         return ((self.actX == self.size - 2) and (self.actY == self.size - 1)) or ((self.actX == self.size - 1) and (self.actY == self.size - 2))
@@ -176,7 +178,7 @@ class MapGen:
         self.fields[0][0] = 2
         self.fields[self.size - 1][self.size - 1] = 3
 
-    def generate_map(self):
+    def generate_map(self, after_generate):
         try:
             os.remove("D:\\Projekty\\Python\\MouseRunner\\aa.txt")
         except FileNotFoundError:
@@ -197,4 +199,4 @@ class MapGen:
         f.close()
         for i in self.fields:
             print(i)
-        return self.fields
+        after_generate(self.fields)
