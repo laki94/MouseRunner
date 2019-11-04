@@ -1,1 +1,7 @@
 ﻿*.pyc
+*.qm
+*.pyd
+*.dll
+build
+dist
+.idea
