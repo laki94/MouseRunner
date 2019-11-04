@@ -2,20 +2,20 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from MapGenerator import MapGen
 from PyQt5.QtGui import QColor, QPainter, QFontMetrics
 import PyQt5
-import pyautogui
 import numpy
 import threading
 import time
-
+import win32api
+import win32gui
 
 white_color = '#ffffff'
 MAPSIZE = 600
-TILESIZE = 0.1
 
 
 class Canvas(QtWidgets.QLabel):
-    def __init__(self,):
+    def __init__(self, tile_size):
         super().__init__()
+        self.tile_size = tile_size
         pixmap = QtGui.QPixmap(MAPSIZE, MAPSIZE)
         self.board_color = QtGui.QColor(white_color)
         pixmap.fill(self.board_color)
@@ -24,8 +24,8 @@ class Canvas(QtWidgets.QLabel):
     def draw_map(self, tiles):
         painter = QtGui.QPainter(self.pixmap())
         pen = QtGui.QPen()
-        pen.setWidth(round(MAPSIZE * TILESIZE))
-        pointX = round(MAPSIZE * TILESIZE) / 2
+        pen.setWidth(round(MAPSIZE * self.tile_size))
+        pointX = round(MAPSIZE * self.tile_size) / 2
         pointY = pointX
         for i in tiles:
             for j in i:
@@ -39,9 +39,9 @@ class Canvas(QtWidgets.QLabel):
                     pen.setColor(QtGui.QColor('green'))
                 painter.setPen(pen)
                 painter.drawPoint(pointX, pointY)
-                pointX = pointX + round(MAPSIZE * TILESIZE)
-            pointX = round(MAPSIZE * TILESIZE) / 2
-            pointY = pointY + round(MAPSIZE * TILESIZE)
+                pointX = pointX + round(MAPSIZE * self.tile_size)
+            pointX = round(MAPSIZE * self.tile_size) / 2
+            pointY = pointY + round(MAPSIZE * self.tile_size)
         painter.end()
 
     def __write_info_on_screen(self, text):
@@ -84,6 +84,7 @@ class Canvas(QtWidgets.QLabel):
         text_height = fm.height() / 2
         rectangle = QtCore.QRect(pointX - text_width, pointY - 3 * text_height, pointX + text_width, pointY - text_height)
         painter.drawText(rectangle, 0, text)
+        painter.end()
 
     def show_won_map_info(self):
         self.__clear_canvas()
@@ -96,20 +97,29 @@ class Canvas(QtWidgets.QLabel):
         self.__write_info_on_screen("Generowanie mapy...")
 
 
-def is_pointer_on_color(rgb, e):
-    return pyautogui.pixelMatchesColor(e.globalPos().x(), e.globalPos().y(), rgb, 10)
+def get_pixel_colour(i_x, i_y):
+    i_desktop_window_id= win32gui.GetDesktopWindow()
+    i_desktop_window_dc = win32gui.GetWindowDC(i_desktop_window_id)
+    long_colour = win32gui.GetPixel(i_desktop_window_dc, i_x, i_y)
+    i_colour = int(long_colour)
+    return (i_colour & 0xff), ((i_colour >> 8) & 0xff), ((i_colour >> 16) & 0xff)
 
 
-def is_pointer_on_black_pixel(e):
-    return is_pointer_on_color(QColor('black').getRgb(), e)
+def is_pointer_on_color(rgb, pos):
+    act_color = get_pixel_colour(pos[0], pos[1])
+    return (abs(act_color[0] - rgb[0]) + abs(act_color[1] - rgb[1]) + abs(act_color[2] - rgb[2])) < 10
 
 
-def is_pointer_on_green_pixel(e):
-    return is_pointer_on_color(QColor('green').getRgb(), e)
+def is_pointer_on_black_pixel(pos):
+    return is_pointer_on_color(QColor('black').getRgb(), pos)
 
 
-def is_pointer_on_red_pixel(e):
-    return is_pointer_on_color(QColor('red').getRgb(), e)
+def is_pointer_on_green_pixel(pos):
+    return is_pointer_on_color(QColor('green').getRgb(), pos)
+
+
+def is_pointer_on_red_pixel(pos):
+    return is_pointer_on_color(QColor('red').getRgb(), pos)
 
 
 class Map(QtWidgets.QMainWindow):
@@ -123,11 +133,11 @@ class Map(QtWidgets.QMainWindow):
 
     def __generate_random_map(self):
         self.generating_map = True
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * TILESIZE)))
+        generated = MapGen(round(MAPSIZE / (MAPSIZE * self.tile_size)))
         generated.generate_map(self.__after_generate_callback)
 
     def __init_ui(self):
-        self.canvas = Canvas()
+        self.canvas = Canvas(self.tile_size)
         self.l = QtWidgets.QVBoxLayout()
         w = QtWidgets.QWidget()
         w.setLayout(self.l)
@@ -135,8 +145,9 @@ class Map(QtWidgets.QMainWindow):
         self.setCentralWidget(w)
         w.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
-    def __init__(self, ):
+    def __init__(self,):
         super().__init__()
+        self.tile_size = 0.1
         self.__init_ui()
         self.canvas.show_loading_map_info()
         self.setMouseTracking(True)
@@ -151,26 +162,32 @@ class Map(QtWidgets.QMainWindow):
         self.move(frame_gm.topLeft())
 
     def __set_start_pos_pointer(self):
-        self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() - 8 + round(MAPSIZE * TILESIZE),
-                          self.mapToGlobal(self.centralWidget().pos()).y() - 8 + round(MAPSIZE * TILESIZE))
-        pyautogui.moveTo(self.act_pos)
+        self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() + self.canvas.pos().x() + round((MAPSIZE * self.tile_size) / 2),
+                          self.mapToGlobal(self.centralWidget().pos()).y() + self.canvas.pos().y() + round((MAPSIZE * self.tile_size) / 2))
+        win32api.SetCursorPos(self.act_pos)
 
     def __set_score_text(self):
         self.setWindowTitle("MouseRunner - Wynik: %d" % self.score)
 
     def __new_game(self):
+        if 0.1 - ((self.score // 3) / 100) < 0.1:
+            self.tile_size = 0.1 - ((self.score // 3) / 100)
+            self.canvas.tile_size = self.tile_size
         threading.Thread(target=self.__generate_random_map).start()
         self.__set_score_text()
 
     def show(self):
         super(Map, self).show()
+        self.window_pos = self.pos()
         self.__center()
         self.__new_game()
 
-    def __did_pointer_jump(self, e):
-        tmp_pos = (e.globalPos().x(), e.globalPos().y())
-        val = numpy.abs(numpy.subtract(self.act_pos, tmp_pos))
-        return any(val > (MAPSIZE * TILESIZE)) and (not is_pointer_on_red_pixel(e))
+    def __did_pointer_jump(self, pos):
+        prev_x = abs(self.act_pos[0] - self.window_pos.x())
+        prev_y = abs(self.act_pos[1] - self.window_pos.y())
+        act_x = abs(pos[0] - self.pos().x())
+        act_y = abs(pos[1] - self.pos().y())
+        return ((abs(prev_x - act_x) + abs(prev_y - act_y)) > 2*round(MAPSIZE * self.tile_size)) and (not is_pointer_on_red_pixel(pos))
 
     def __do_on_new_game(self):
         self.update()
@@ -190,12 +207,19 @@ class Map(QtWidgets.QMainWindow):
         if self.generating_map:
             pass
         else:
-            if is_pointer_on_black_pixel(e) or self.__did_pointer_jump(e):
+            x = e.globalPos().x()
+            y = e.globalPos().y()
+
+            tmpx = self.mapToGlobal(self.centralWidget().pos()).x()
+            if (x < (self.mapToGlobal(self.centralWidget().pos()).x() + 15)) or (x > (self.mapToGlobal(self.centralWidget().pos()).x() + self.centralWidget().height()) - 15) or (y < (self.mapToGlobal(self.centralWidget().pos()).y() + 15)) or (y > (self.mapToGlobal(self.centralWidget().pos()).y() + self.centralWidget().height()) - 15):
+                pass
+            elif is_pointer_on_black_pixel((x, y)) or self.__did_pointer_jump((x, y)):
                 self.__do_on_game_lost()
-            elif is_pointer_on_green_pixel(e):
+            elif is_pointer_on_green_pixel((x, y)):
                 self.__do_on_game_won()
             else:
-                self.act_pos = (e.globalPos().x(), e.globalPos().y())
+                self.act_pos = (x, y)
+                self.window_pos = self.pos()
 
     def keyPressEvent(self, ev):
         if self.generating_map:
