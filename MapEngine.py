@@ -7,6 +7,7 @@ import threading
 import time
 import win32api
 import win32gui
+import math
 
 MAPSIZE = 600
 
@@ -19,10 +20,11 @@ class Canvas(QtWidgets.QLabel):
         self.setPixmap(pixmap)
 
     def draw_map(self, tiles):
+        self.pixmap().fill(QtGui.QColor('black'))
         painter = QtGui.QPainter(self.pixmap())
         pen = QtGui.QPen()
-        pen.setWidth(round(MAPSIZE * self.tile_size))
-        pointX = round(MAPSIZE * self.tile_size) / 2
+        pen.setWidth(self.width() // len(tiles))
+        pointX = pen.width() // 2
         pointY = pointX
         for i in tiles:
             for j in i:
@@ -36,9 +38,9 @@ class Canvas(QtWidgets.QLabel):
                     pen.setColor(QtGui.QColor('green'))
                 painter.setPen(pen)
                 painter.drawPoint(pointX, pointY)
-                pointX = pointX + round(MAPSIZE * self.tile_size)
-            pointX = round(MAPSIZE * self.tile_size) / 2
-            pointY = pointY + round(MAPSIZE * self.tile_size)
+                pointX = pointX + pen.width()
+            pointX = (pen.width() // 2)
+            pointY = pointY + pen.width()
         painter.end()
 
     def __write_info_on_screen(self, text):
@@ -122,7 +124,8 @@ def is_pointer_on_red_pixel(pos):
 class Map(QtWidgets.QMainWindow):
 
     def __after_generate_callback(self, tiles):
-        self.canvas.draw_map(tiles)
+        self.map_tiles = tiles
+        self.canvas.draw_map(self.map_tiles)
         time.sleep(1)
         self.update()
         self.__set_start_pos_pointer()
@@ -144,11 +147,13 @@ class Map(QtWidgets.QMainWindow):
 
     def __init__(self,):
         super().__init__()
+        self.map_tiles = []
         self.tile_size = 0.1
         self.__init_ui()
         self.canvas.show_loading_map_info()
         self.setMouseTracking(True)
         self.score = 0
+        self.prev_dist = 0
 
     def __center(self):
         frame_gm = self.frameGeometry()
@@ -159,8 +164,8 @@ class Map(QtWidgets.QMainWindow):
         self.move(frame_gm.topLeft())
 
     def __set_start_pos_pointer(self):
-        self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() + self.canvas.pos().x() + round((MAPSIZE * self.tile_size) / 2),
-                          self.mapToGlobal(self.centralWidget().pos()).y() + self.canvas.pos().y() + round((MAPSIZE * self.tile_size) / 2))
+        self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() + self.canvas.pos().x() + round(MAPSIZE // len(self.map_tiles)),
+                          self.mapToGlobal(self.centralWidget().pos()).y() + self.canvas.pos().y() + round(MAPSIZE // len(self.map_tiles)))
         win32api.SetCursorPos(self.act_pos)
 
     def __set_score_text(self):
@@ -184,7 +189,17 @@ class Map(QtWidgets.QMainWindow):
         prev_y = abs(self.act_pos[1] - self.window_pos.y())
         act_x = abs(pos[0] - self.pos().x())
         act_y = abs(pos[1] - self.pos().y())
-        return ((abs(prev_x - act_x) + abs(prev_y - act_y)) > 2*round(MAPSIZE * self.tile_size)) and (not is_pointer_on_red_pixel(pos))
+        act_dist = math.sqrt(pow(abs(prev_x - act_x), 2) + pow(abs(prev_y - act_y), 2))
+        if self.prev_dist < act_dist:
+            self.prev_dist = act_dist - self.prev_dist
+        else:
+            self.prev_dist = act_dist
+        if self.prev_dist > (abs(prev_x - act_x) + abs(prev_y - act_y)):
+            self.prev_dist = abs((abs(prev_x - act_x) + abs(prev_y - act_y)) - self.prev_dist)
+        else:
+            self.prev_dist = (abs(prev_x - act_x) + abs(prev_y - act_y))
+        print('distance: %d' % self.prev_dist)
+        return (self.prev_dist > (MAPSIZE // len(self.map_tiles))) and (not is_pointer_on_red_pixel(pos))
 
     def __do_on_new_game(self):
         self.update()
