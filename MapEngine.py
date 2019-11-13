@@ -1,4 +1,6 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
+from aenum import enum
+
 from MapGenerator import MapGen
 from PyQt5.QtGui import QColor, QPainter, QFontMetrics
 from PyQt5.QtCore import Qt
@@ -9,6 +11,7 @@ import time
 import win32api
 import win32gui
 import math
+import random
 
 MAPSIZE = 600
 
@@ -27,29 +30,113 @@ class Canvas(QtWidgets.QLabel):
         pointX = 0
         pointY = 0
         tile_size = self.width() // len(tiles)
-        for i in tiles:
-            for j in i:
-                if j == 0:
+        for i in range(len(tiles)):
+            for j in range(len(tiles[i])):
+                right = False
+                left = False
+                top = False
+                bot = False
+                nb = 0
+                if tiles[i][j] == 0:
                     pen.setColor(Qt.black)
                     painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
-                elif j == 1:
+                elif tiles[i][j] == 1:
                     pen.setColor(Qt.white)
                     painter.setBrush(QtGui.QBrush(Qt.white, Qt.SolidPattern))
-                elif j == 2:
+                elif tiles[i][j] == 2:
                     pen.setColor(Qt.red)
                     painter.setBrush(QtGui.QBrush(Qt.red, Qt.SolidPattern))
-                elif j == 3:
+                elif tiles[i][j] == 3:
                     pen.setColor(Qt.green)
                     painter.setBrush(QtGui.QBrush(Qt.green, Qt.SolidPattern))
                 painter.setPen(pen)
                 painter.drawRect(pointX, pointY, tile_size, tile_size)
+
+                if tiles[i][j] == 1 and (tile_size > 15): #TODO przeniesc do funkcji
+                    rand_int = random.randint(0, 100)
+                    if rand_int < 20:
+                        if (j < len(tiles) - 2) and (tiles[i][j + 1] == 1):
+                            right = True
+                            nb = nb + 1
+                        if (j > 2) and (tiles[i][j - 1] == 1):
+                            left = True
+                            nb = nb + 1
+                        if (i < len(tiles) - 2) and (tiles[i + 1][j] == 1):
+                            bot = True
+                            nb = nb + 1
+                        if (i > 2) and (tiles[i - 1][j] == 1):
+                            top = True
+                            nb = nb + 1
+                        if nb != 2:
+                            pass
+                        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
+                        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
+                        black_zone = tile_size // 3
+                        if left and right:
+                            painter.drawRect(pointX, pointY, tile_size, black_zone)
+                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
+                        elif top and bot:
+                            painter.drawRect(pointX, pointY, black_zone, tile_size)
+                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, tile_size)
+                        elif top and left:
+                            painter.drawRect(pointX, pointY, black_zone, black_zone)
+                            painter.drawRect(pointX + 2 *black_zone, pointY, tile_size, tile_size)
+                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
+                        elif top and right:
+                            painter.drawRect(pointX, pointY, black_zone, tile_size)
+                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, black_zone)
+                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
+                        elif bot and left:
+                            painter.drawRect(pointX, pointY, tile_size, black_zone)
+                            painter.drawRect(pointX, pointY + 2*black_zone, black_zone, tile_size)
+                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, tile_size)
+                        elif bot and right:
+                            painter.drawRect(pointX, pointY, tile_size, black_zone)
+                            painter.drawRect(pointX, pointY, black_zone, tile_size)
+                            painter.drawRect(pointX + 2 * black_zone, pointY + 2* black_zone, tile_size, tile_size)
                 pointX = pointX + tile_size
             pointX = 0
             pointY = pointY + tile_size
         painter.end()
 
+    def __do_draw_narrow_line_horizontal(self, i, j, tile_size):
+        painter = QtGui.QPainter(self.pixmap())
+        pen = QtGui.QPen(Qt.SolidLine)
+        pointX = j * tile_size
+        pointY = i * tile_size
+        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
+        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
+        black_zone = round(tile_size / 3)
+        painter.drawRect(pointX, pointY, tile_size - 1, black_zone)
+        painter.drawRect(pointX, pointY + 2*black_zone, tile_size - 1, black_zone)
+        painter.end()
+
+    def __do_draw_narrow_line_vertical(self, i, j, tile_size):
+        painter = QtGui.QPainter(self.pixmap())
+        pen = QtGui.QPen(Qt.SolidLine)
+        pointX = j * tile_size
+        pointY = i * tile_size
+        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
+        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
+        black_zone = round(tile_size / 3)
+        painter.drawRect(pointX, pointY, black_zone, tile_size - 1)
+        painter.drawRect(pointX + 2 * black_zone, pointY, black_zone, tile_size - 1)
+        painter.end()
+
+                # elif left and top:
+                #     __do_draw_narrow_l_left_to_top(i, j) # TODO reszta, i sprawdzic na wyzszym lvl i ekranie czy wszystko ok
+                # elif left and bot:
+                #     __do_draw_narrow_l_left_to_bot(i, j)
+                # elif right and top:
+                #     __do_draw_narrow_l_right_to_top(i, j)
+                # elif right and bot:
+                #     __do_draw_narrow_l_right_to_bot(i, j)
+
+
     def draw_map(self, tiles):
         self.__draw_original_map(tiles)
+        # self.__narrow_map(tiles)
+
     def __write_info_on_screen(self, text):
         painter = QtGui.QPainter(self.pixmap())
         font = painter.font()
