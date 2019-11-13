@@ -1,6 +1,7 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
 from MapGenerator import MapGen
 from PyQt5.QtGui import QColor, QPainter, QFontMetrics
+from PyQt5.QtCore import Qt
 import PyQt5
 import numpy
 import threading
@@ -19,30 +20,36 @@ class Canvas(QtWidgets.QLabel):
         pixmap = QtGui.QPixmap(MAPSIZE, MAPSIZE)
         self.setPixmap(pixmap)
 
-    def draw_map(self, tiles):
-        self.pixmap().fill(QtGui.QColor('black'))
+    def __draw_original_map(self, tiles):
+        self.pixmap().fill(Qt.black)
         painter = QtGui.QPainter(self.pixmap())
-        pen = QtGui.QPen()
-        pen.setWidth(self.width() // len(tiles))
-        pointX = pen.width() // 2
-        pointY = pointX
+        pen = QtGui.QPen(Qt.SolidLine)
+        pointX = 0
+        pointY = 0
+        tile_size = self.width() // len(tiles)
         for i in tiles:
             for j in i:
                 if j == 0:
-                    pen.setColor(QtGui.QColor('black'))
+                    pen.setColor(Qt.black)
+                    painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
                 elif j == 1:
-                    pen.setColor(QtGui.QColor('white'))
+                    pen.setColor(Qt.white)
+                    painter.setBrush(QtGui.QBrush(Qt.white, Qt.SolidPattern))
                 elif j == 2:
-                    pen.setColor(QtGui.QColor('red'))
+                    pen.setColor(Qt.red)
+                    painter.setBrush(QtGui.QBrush(Qt.red, Qt.SolidPattern))
                 elif j == 3:
-                    pen.setColor(QtGui.QColor('green'))
+                    pen.setColor(Qt.green)
+                    painter.setBrush(QtGui.QBrush(Qt.green, Qt.SolidPattern))
                 painter.setPen(pen)
-                painter.drawPoint(pointX, pointY)
-                pointX = pointX + pen.width()
-            pointX = (pen.width() // 2)
-            pointY = pointY + pen.width()
+                painter.drawRect(pointX, pointY, tile_size, tile_size)
+                pointX = pointX + tile_size
+            pointX = 0
+            pointY = pointY + tile_size
         painter.end()
 
+    def draw_map(self, tiles):
+        self.__draw_original_map(tiles)
     def __write_info_on_screen(self, text):
         painter = QtGui.QPainter(self.pixmap())
         font = painter.font()
@@ -110,15 +117,15 @@ def is_pointer_on_color(rgb, pos):
 
 
 def is_pointer_on_black_pixel(pos):
-    return is_pointer_on_color(QColor('black').getRgb(), pos)
+    return is_pointer_on_color(QColor(Qt.black).getRgb(), pos)
 
 
 def is_pointer_on_green_pixel(pos):
-    return is_pointer_on_color(QColor('green').getRgb(), pos)
+    return is_pointer_on_color(QColor(Qt.green).getRgb(), pos)
 
 
 def is_pointer_on_red_pixel(pos):
-    return is_pointer_on_color(QColor('red').getRgb(), pos)
+    return is_pointer_on_color(QColor(Qt.red).getRgb(), pos)
 
 
 class Map(QtWidgets.QMainWindow):
