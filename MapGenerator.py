@@ -136,7 +136,7 @@ class MapGen:
         return was_removed
 
     def saveFieldsToFile(self):
-        f = open("D:\\Projekty\\Python\\MouseRunner\\aa.txt", 'ab')
+        f = open(os.getcwd() + "\\logs.txt", 'a+b')
         numpy.savetxt(f, self.fields, '%d')
         f.write(b"\n")
         f.close()
@@ -171,16 +171,31 @@ class MapGen:
             self.saveFieldsToFile()
         # self.__remove_remaining_values()
 
+    def __add_border(self):
+        tmp_arr = [[0 for x in range(self.size + 2)] for y in range(self.size + 2)]
+        for y in range(self.size + 2):
+            if y == 0 or y == self.size + 1:
+                pass
+            else:
+                for x in range(self.size + 1):
+                    if (x == 0) or (x == self.size + 2):
+                        pass
+                    else:
+                        tmp_arr[y][x] = self.fields[y - 1][x - 1]
+        tmp_arr[0][0] = tmp_arr[0][1] = tmp_arr[1][0] = 2
+        self.fields = tmp_arr
+
     def __finish_maze(self):
         print("maze ended")
         self.fields[self.size - 1][self.size - 1] = 1
         self.__clear_maze()
         self.fields[0][0] = 2
         self.fields[self.size - 1][self.size - 1] = 3
+        self.__add_border()
 
     def generate_map(self, after_generate):
         try:
-            os.remove("D:\\Projekty\\Python\\MouseRunner\\aa.txt")
+            os.remove(os.getcwd() + "\\logs.txt")
         except FileNotFoundError:
             pass
         while True:
@@ -193,10 +208,7 @@ class MapGen:
             if self.__maze_ended():
                 break
         self.__finish_maze()
-        f = open("D:\\Projekty\\Python\\MouseRunner\\aa.txt", 'ab')
-        numpy.savetxt(f, self.fields, '%d')
-        f.write(b"\n")
-        f.close()
+        self.saveFieldsToFile()
         for i in self.fields:
             print(i)
         after_generate(self.fields)
