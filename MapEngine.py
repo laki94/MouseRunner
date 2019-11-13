@@ -8,7 +8,6 @@ import time
 import win32api
 import win32gui
 
-white_color = '#ffffff'
 MAPSIZE = 600
 
 
@@ -17,8 +16,6 @@ class Canvas(QtWidgets.QLabel):
         super().__init__()
         self.tile_size = tile_size
         pixmap = QtGui.QPixmap(MAPSIZE, MAPSIZE)
-        self.board_color = QtGui.QColor(white_color)
-        pixmap.fill(self.board_color)
         self.setPixmap(pixmap)
 
     def draw_map(self, tiles):
@@ -98,7 +95,7 @@ class Canvas(QtWidgets.QLabel):
 
 
 def get_pixel_colour(i_x, i_y):
-    i_desktop_window_id= win32gui.GetDesktopWindow()
+    i_desktop_window_id = win32gui.GetDesktopWindow()
     i_desktop_window_dc = win32gui.GetWindowDC(i_desktop_window_id)
     long_colour = win32gui.GetPixel(i_desktop_window_dc, i_x, i_y)
     i_colour = int(long_colour)
@@ -210,10 +207,10 @@ class Map(QtWidgets.QMainWindow):
             x = e.globalPos().x()
             y = e.globalPos().y()
 
-            tmpx = self.mapToGlobal(self.centralWidget().pos()).x()
             if (x < (self.mapToGlobal(self.centralWidget().pos()).x() + 15)) or (x > (self.mapToGlobal(self.centralWidget().pos()).x() + self.centralWidget().height()) - 15) or (y < (self.mapToGlobal(self.centralWidget().pos()).y() + 15)) or (y > (self.mapToGlobal(self.centralWidget().pos()).y() + self.centralWidget().height()) - 15):
                 pass
             elif is_pointer_on_black_pixel((x, y)) or self.__did_pointer_jump((x, y)):
+                print('pointer on black pixel')
                 self.__do_on_game_lost()
             elif is_pointer_on_green_pixel((x, y)):
                 self.__do_on_game_won()
@@ -228,3 +225,7 @@ class Map(QtWidgets.QMainWindow):
             if ev.key() == QtCore.Qt.Key_R:
                 self.canvas.show_loading_map_info()
                 self.__do_on_new_game()
+            elif ev.key() == QtCore.Qt.Key_W:
+                self.__do_on_game_won()
+            elif ev.key() == QtCore.Qt.Key_L:
+                self.__do_on_game_lost()
