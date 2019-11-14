@@ -3,7 +3,7 @@ from aenum import enum
 
 from MapGenerator import MapGen
 from PyQt5.QtGui import QColor, QPainter, QFontMetrics
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 import PyQt5
 import numpy
 import threading
@@ -32,11 +32,6 @@ class Canvas(QtWidgets.QLabel):
         tile_size = self.width() // len(tiles)
         for i in range(len(tiles)):
             for j in range(len(tiles[i])):
-                right = False
-                left = False
-                top = False
-                bot = False
-                nb = 0
                 if tiles[i][j] == 0:
                     pen.setColor(Qt.black)
                     painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
@@ -51,91 +46,63 @@ class Canvas(QtWidgets.QLabel):
                     painter.setBrush(QtGui.QBrush(Qt.green, Qt.SolidPattern))
                 painter.setPen(pen)
                 painter.drawRect(pointX, pointY, tile_size, tile_size)
-
-                if tiles[i][j] == 1 and (tile_size > 15): #TODO przeniesc do funkcji
-                    rand_int = random.randint(0, 100)
-                    if rand_int < 20:
-                        if (j < len(tiles) - 2) and (tiles[i][j + 1] == 1):
-                            right = True
-                            nb = nb + 1
-                        if (j > 2) and (tiles[i][j - 1] == 1):
-                            left = True
-                            nb = nb + 1
-                        if (i < len(tiles) - 2) and (tiles[i + 1][j] == 1):
-                            bot = True
-                            nb = nb + 1
-                        if (i > 2) and (tiles[i - 1][j] == 1):
-                            top = True
-                            nb = nb + 1
-                        if nb != 2:
-                            pass
-                        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
-                        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
-                        black_zone = tile_size // 3
-                        if left and right:
-                            painter.drawRect(pointX, pointY, tile_size, black_zone)
-                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
-                        elif top and bot:
-                            painter.drawRect(pointX, pointY, black_zone, tile_size)
-                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, tile_size)
-                        elif top and left:
-                            painter.drawRect(pointX, pointY, black_zone, black_zone)
-                            painter.drawRect(pointX + 2 *black_zone, pointY, tile_size, tile_size)
-                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
-                        elif top and right:
-                            painter.drawRect(pointX, pointY, black_zone, tile_size)
-                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, black_zone)
-                            painter.drawRect(pointX, pointY + 2*black_zone, tile_size, tile_size)
-                        elif bot and left:
-                            painter.drawRect(pointX, pointY, tile_size, black_zone)
-                            painter.drawRect(pointX, pointY + 2*black_zone, black_zone, tile_size)
-                            painter.drawRect(pointX + 2*black_zone, pointY, tile_size, tile_size)
-                        elif bot and right:
-                            painter.drawRect(pointX, pointY, tile_size, black_zone)
-                            painter.drawRect(pointX, pointY, black_zone, tile_size)
-                            painter.drawRect(pointX + 2 * black_zone, pointY + 2* black_zone, tile_size, tile_size)
+                self.__draw_narrow_spot(tiles, i, j, tile_size, pointX, pointY, painter)
                 pointX = pointX + tile_size
             pointX = 0
             pointY = pointY + tile_size
         painter.end()
 
-    def __do_draw_narrow_line_horizontal(self, i, j, tile_size):
-        painter = QtGui.QPainter(self.pixmap())
-        pen = QtGui.QPen(Qt.SolidLine)
-        pointX = j * tile_size
-        pointY = i * tile_size
-        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
-        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
-        black_zone = round(tile_size / 3)
-        painter.drawRect(pointX, pointY, tile_size - 1, black_zone)
-        painter.drawRect(pointX, pointY + 2*black_zone, tile_size - 1, black_zone)
-        painter.end()
-
-    def __do_draw_narrow_line_vertical(self, i, j, tile_size):
-        painter = QtGui.QPainter(self.pixmap())
-        pen = QtGui.QPen(Qt.SolidLine)
-        pointX = j * tile_size
-        pointY = i * tile_size
-        painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
-        painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
-        black_zone = round(tile_size / 3)
-        painter.drawRect(pointX, pointY, black_zone, tile_size - 1)
-        painter.drawRect(pointX + 2 * black_zone, pointY, black_zone, tile_size - 1)
-        painter.end()
-
-                # elif left and top:
-                #     __do_draw_narrow_l_left_to_top(i, j) # TODO reszta, i sprawdzic na wyzszym lvl i ekranie czy wszystko ok
-                # elif left and bot:
-                #     __do_draw_narrow_l_left_to_bot(i, j)
-                # elif right and top:
-                #     __do_draw_narrow_l_right_to_top(i, j)
-                # elif right and bot:
-                #     __do_draw_narrow_l_right_to_bot(i, j)
-
+    def __draw_narrow_spot(self, tiles, i, j, tile_size, pointX, pointY, painter):
+        right = False
+        left = False
+        top = False
+        bot = False
+        nb = 0
+        if tiles[i][j] == 1 and (tile_size > 15):  # TODO przeniesc do funkcji
+            rand_int = random.randint(0, 100)
+            if rand_int < 20:
+                if (j < len(tiles) - 2) and (tiles[i][j + 1] == 1):
+                    right = True
+                    nb = nb + 1
+                if (j > 2) and (tiles[i][j - 1] == 1):
+                    left = True
+                    nb = nb + 1
+                if (i < len(tiles) - 2) and (tiles[i + 1][j] == 1):
+                    bot = True
+                    nb = nb + 1
+                if (i > 2) and (tiles[i - 1][j] == 1):
+                    top = True
+                    nb = nb + 1
+                if nb != 2:
+                    pass
+                painter.setPen(QtGui.QPen(Qt.black, Qt.SolidLine))
+                painter.setBrush(QtGui.QBrush(Qt.black, Qt.SolidPattern))
+                black_zone = tile_size // 3
+                if left and right:
+                    painter.drawRect(pointX, pointY, tile_size, black_zone)
+                    painter.drawRect(pointX, pointY + 2 * black_zone, tile_size, tile_size)
+                elif top and bot:
+                    painter.drawRect(pointX, pointY, black_zone, tile_size)
+                    painter.drawRect(pointX + 2 * black_zone, pointY, tile_size, tile_size)
+                elif top and left:
+                    painter.drawRect(pointX, pointY, black_zone, black_zone)
+                    painter.drawRect(pointX + 2 * black_zone, pointY, tile_size, tile_size)
+                    painter.drawRect(pointX, pointY + 2 * black_zone, tile_size, tile_size)
+                elif top and right:
+                    painter.drawRect(pointX, pointY, black_zone, tile_size)
+                    painter.drawRect(pointX + 2 * black_zone, pointY, tile_size, black_zone)
+                    painter.drawRect(pointX, pointY + 2 * black_zone, tile_size, tile_size)
+                elif bot and left:
+                    painter.drawRect(pointX, pointY, tile_size, black_zone)
+                    painter.drawRect(pointX, pointY + 2 * black_zone, black_zone, tile_size)
+                    painter.drawRect(pointX + 2 * black_zone, pointY, tile_size, tile_size)
+                elif bot and right:
+                    painter.drawRect(pointX, pointY, tile_size, black_zone)
+                    painter.drawRect(pointX, pointY, black_zone, tile_size)
+                    painter.drawRect(pointX + 2 * black_zone, pointY + 2 * black_zone, tile_size, tile_size)
 
     def draw_map(self, tiles):
         self.__draw_original_map(tiles)
-        # self.__narrow_map(tiles)
 
     def __write_info_on_screen(self, text):
         painter = QtGui.QPainter(self.pixmap())
@@ -156,7 +123,7 @@ class Canvas(QtWidgets.QLabel):
         pen.setWidth(MAPSIZE)
         pointX = round(MAPSIZE / 2)
         pointY = pointX
-        pen.setColor(QtGui.QColor('white'))
+        pen.setColor(Qt.white)
         painter.setPen(pen)
         painter.drawPoint(pointX, pointY)
         painter.end()
@@ -217,18 +184,57 @@ def is_pointer_on_red_pixel(pos):
 
 class Map(QtWidgets.QMainWindow):
 
-    def __after_generate_callback(self, tiles):
-        self.map_tiles = tiles
-        self.canvas.draw_map(self.map_tiles)
-        time.sleep(1)
-        self.update()
-        self.__set_start_pos_pointer()
-        self.generating_map = False
+    def __after_generate_act_map_callback(self, tiles):
+        self.act_map_tiles = tiles
+        self.generating_map_act = False
+        print('act map generated, tiles=%d' % len(tiles))
 
-    def __generate_random_map(self):
-        self.generating_map = True
+    def __after_generate_next_map_callback(self, tiles):
+        self.next_map_tiles = tiles
+        self.generating_map_next = False
+        print('next map generated, tiles=%d' % len(tiles))
+
+    def __after_generate_prev_map_callback(self, tiles):
+        self.prev_map_tiles = tiles
+        self.generating_map_prev = False
+        print('prev map generated, tiles=%d' % len(tiles))
+
+    def __generate_random_map_next(self):
+        self.generating_map_next = True
+        tmp_tile_size = 0.1 - (((self.score + 1) // 3) / 100)
+        if tmp_tile_size < 0.01:
+            tmp_tile_size = 0.01
+        if (self.score < 2) or ((self.score + 1) // 3 == (self.score // 3)):
+            self.generating_map_next = False
+        else:
+            print('generating next map')
+            generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)))
+            generated.generate_map(self.__after_generate_next_map_callback)
+
+    def __generate_random_map_act(self):
+        print('generating act map')
+        self.generating_map_act = True
+        # tmp_tile_size = 0.1 - ((self.score // 3) / 100)
+        self.tile_size = 0.1 - ((self.score // 3) / 100)
+        if self.tile_size < 0.01:
+            self.tile_size = 0.01
+        elif self.tile_size > 0.1:
+            self.tile_size = 0.1
+        self.canvas.tile_size = self.tile_size
         generated = MapGen(round(MAPSIZE / (MAPSIZE * self.tile_size)))
-        generated.generate_map(self.__after_generate_callback)
+        generated.generate_map(self.__after_generate_act_map_callback)
+
+    def __generate_random_map_prev(self):
+        self.generating_map_prev = True
+        tmp_tile_size = 0.1 - (((self.score - 1) // 3) / 100)
+        if tmp_tile_size > 0.1:
+            tmp_tile_size = 0.1
+        if ((self.score == 0) or (self.score - 1) // 3 == (self.score // 3)):
+            self.generating_map_prev = False
+        else:
+            print('generating prev map')
+            generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)))
+            generated.generate_map(self.__after_generate_prev_map_callback)
 
     def __init_ui(self):
         self.canvas = Canvas(self.tile_size)
@@ -242,12 +248,52 @@ class Map(QtWidgets.QMainWindow):
     def __init__(self,):
         super().__init__()
         self.map_tiles = []
+        self.act_map_tiles = []
+        self.next_map_tiles = []
+        self.prev_map_tiles = []
         self.tile_size = 0.1
         self.__init_ui()
         self.canvas.show_loading_map_info()
         self.setMouseTracking(True)
         self.score = 0
         self.prev_dist = 0
+        self.generating_map_act = False
+        self.generating_map_next = False
+        self.generating_map_prev = False
+        self.map_generated = False
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.__on_timer_tick)
+        self.timer.start(1000)
+        self.game_won = False
+        self.game_lost = False
+        self.refresh_game = False
+
+    def __on_timer_tick(self):
+        if (not self.generating_map_next) and (len(self.next_map_tiles) == 0):
+            threading.Thread(target=self.__generate_random_map_next).start()
+        if (not self.generating_map_act) and (len(self.act_map_tiles) == 0):
+            threading.Thread(target=self.__generate_random_map_act).start()
+        if (not self.generating_map_prev) and (len(self.prev_map_tiles) == 0):
+            threading.Thread(target=self.__generate_random_map_prev).start()
+
+        if self.generating_map_act or self.generating_map_prev or self.generating_map_next:
+            pass
+        else:
+            if self.game_won:
+                if (self.score % 3) == 0:
+                    self.__draw_next_map()
+                else:
+                    self.__draw_act_map()
+                self.game_won = False
+            elif self.game_lost:
+                if (self.score % 3) == 0:
+                    self.__draw_prev_map()
+                else:
+                    self.__draw_act_map()
+                self.game_lost = False
+            elif self.refresh_game:
+                self.__draw_act_map()
+                self.refresh_game = False
 
     def __center(self):
         frame_gm = self.frameGeometry()
@@ -265,52 +311,102 @@ class Map(QtWidgets.QMainWindow):
     def __set_score_text(self):
         self.setWindowTitle("MouseRunner - Wynik: %d" % self.score)
 
-    def __new_game(self):
-        if 0.1 - ((self.score // 3) / 100) < 0.1:
-            self.tile_size = 0.1 - ((self.score // 3) / 100)
-            self.canvas.tile_size = self.tile_size
-        threading.Thread(target=self.__generate_random_map).start()
+    def __first_game(self):
         self.__set_score_text()
+        self.refresh_game = True
+        # self.__draw_act_map()
+
+    def __draw_act_map(self):
+        while len(self.act_map_tiles) == 0:
+            time.sleep(0.01)
+        self.map_tiles = self.act_map_tiles
+        self.act_map_tiles = []
+        self.canvas.draw_map(self.map_tiles)
+        self.update()
+        time.sleep(1)
+        self.__set_start_pos_pointer()
+        self.map_generated = True
+
+    def __draw_next_map(self):
+        while len(self.next_map_tiles) == 0:
+            time.sleep(0.01)
+        self.map_tiles = self.next_map_tiles
+        self.next_map_tiles = []
+        self.act_map_tiles = []
+        self.canvas.draw_map(self.map_tiles)
+        self.update()
+        time.sleep(1)
+        self.__set_start_pos_pointer()
+        self.map_generated = True
+
+    def __draw_prev_map(self):
+        while len(self.prev_map_tiles) == 0:
+            time.sleep(0.01)
+        self.map_tiles = self.prev_map_tiles
+        self.prev_map_tiles = []
+        self.act_map_tiles = []
+        self.canvas.draw_map(self.map_tiles)
+        self.update()
+        time.sleep(1)
+        self.__set_start_pos_pointer()
+        self.map_generated = True
 
     def show(self):
         super(Map, self).show()
         self.window_pos = self.pos()
         self.__center()
-        self.__new_game()
+        self.__first_game()
 
     def __did_pointer_jump(self, pos):
-        prev_x = abs(self.act_pos[0] - self.window_pos.x())
-        prev_y = abs(self.act_pos[1] - self.window_pos.y())
-        act_x = abs(pos[0] - self.pos().x())
-        act_y = abs(pos[1] - self.pos().y())
-        act_dist = math.sqrt(pow(abs(prev_x - act_x), 2) + pow(abs(prev_y - act_y), 2))
-        if self.prev_dist < act_dist:
-            self.prev_dist = act_dist - self.prev_dist
-        else:
-            self.prev_dist = act_dist
-        if self.prev_dist > (abs(prev_x - act_x) + abs(prev_y - act_y)):
-            self.prev_dist = abs((abs(prev_x - act_x) + abs(prev_y - act_y)) - self.prev_dist)
-        else:
-            self.prev_dist = (abs(prev_x - act_x) + abs(prev_y - act_y))
-        print('distance: %d' % self.prev_dist)
-        return (self.prev_dist > (MAPSIZE // len(self.map_tiles))) and (not is_pointer_on_red_pixel(pos))
+        try:
+            prev_x = abs(self.act_pos[0] - self.window_pos.x())
+            prev_y = abs(self.act_pos[1] - self.window_pos.y())
+            act_x = abs(pos[0] - self.pos().x())
+            act_y = abs(pos[1] - self.pos().y())
+            act_dist = math.sqrt(pow(abs(prev_x - act_x), 2) + pow(abs(prev_y - act_y), 2))
+            if self.prev_dist < act_dist:
+                self.prev_dist = act_dist - self.prev_dist
+            else:
+                self.prev_dist = act_dist
+            if self.prev_dist > (abs(prev_x - act_x) + abs(prev_y - act_y)):
+                self.prev_dist = abs((abs(prev_x - act_x) + abs(prev_y - act_y)) - self.prev_dist)
+            else:
+                self.prev_dist = (abs(prev_x - act_x) + abs(prev_y - act_y))
+            print('distance: %d' % self.prev_dist)
+            return (self.prev_dist > (MAPSIZE // len(self.map_tiles))) and (not is_pointer_on_red_pixel(pos))
+        except Exception:
+            return False
 
     def __do_on_new_game(self):
+        self.map_generated = False
+        self.canvas.show_loading_map_info()
         self.update()
-        self.__new_game()
+        self.refresh_game = True
 
     def __do_on_game_lost(self):
+        self.map_generated = False
+        # if 0.1 - ((self.score // 3) / 100) < 0.1:
+        #     self.tile_size = 0.1 - ((self.score // 3) / 100)
+        #     self.canvas.tile_size = self.tile_size
         self.canvas.show_lost_map_info()
         self.score = self.score - 1
-        self.__do_on_new_game()
+        self.update()
+        self.game_lost = True
+        self.__set_score_text()
 
     def __do_on_game_won(self):
+        self.map_generated = False
+        # if 0.1 - ((self.score // 3) / 100) < 0.1:
+        #     self.tile_size = 0.1 - ((self.score // 3) / 100)
+        #     self.canvas.tile_size = self.tile_size
         self.canvas.show_won_map_info()
         self.score = self.score + 1
-        self.__do_on_new_game()
+        self.update()
+        self.game_won = True
+        self.__set_score_text()
 
     def mouseMoveEvent(self, e):
-        if self.generating_map:
+        if not self.map_generated:
             pass
         else:
             x = e.globalPos().x()
@@ -328,7 +424,7 @@ class Map(QtWidgets.QMainWindow):
                 self.window_pos = self.pos()
 
     def keyPressEvent(self, ev):
-        if self.generating_map:
+        if not self.map_generated:
             pass
         else:
             if ev.key() == QtCore.Qt.Key_R:

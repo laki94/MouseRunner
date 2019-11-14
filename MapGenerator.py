@@ -71,7 +71,7 @@ class MapGen:
         nextField = random.choice(self.validFields)
         self.actX = nextField[0]
         self.actY = nextField[1]
-        print("choosen field ", [self.actX, self.actY])
+        # print("choosen field ", [self.actX, self.actY])
         self.fields[self.actY][self.actX] = self.fields[self.actY][self.actX] + 1
         # w razie nieobsługiwanego błedu
         if self.fields[self.actY][self.actX] > 50:
@@ -100,15 +100,15 @@ class MapGen:
 
                 if self.fields[i][j] == 1:
                     if neighbours < 2:
-                        print('zmiana punktu', i, j, 'na 0 bo neighbours=', neighbours)
-                        if j != 0:
-                            print('left=', self.fields[i][j - 1])
-                        if j != self.size - 1:
-                            print('right=', self.fields[i][j + 1])
-                        if i != 0:
-                            print('top=', self.fields[i - 1][j])
-                        if i != self.size - 1:
-                            print('bot=', self.fields[i + 1][j])
+                        # print('zmiana punktu', i, j, 'na 0 bo neighbours=', neighbours)
+                        # if j != 0:
+                            # print('left=', self.fields[i][j - 1])
+                        # if j != self.size - 1:
+                        #     print('right=', self.fields[i][j + 1])
+                        # if i != 0:
+                        #     print('top=', self.fields[i - 1][j])
+                        # if i != self.size - 1:
+                        #     print('bot=', self.fields[i + 1][j])
                         self.fields[i][j] = 0
                         was_removed = True
         return was_removed
@@ -130,16 +130,10 @@ class MapGen:
                     neighbours = neighbours + 1
 
                 if self.fields[i][j] > 1:
-                    print("zmiana punktu", i, j, "na 0 bo teraz ma 2 i neighbours=", neighbours)
+                    # print("zmiana punktu", i, j, "na 0 bo teraz ma 2 i neighbours=", neighbours)
                     self.fields[i][j] = 0
                     was_removed = True
         return was_removed
-
-    def saveFieldsToFile(self):
-        f = open(os.getcwd() + "\\logs.txt", 'a+b')
-        numpy.savetxt(f, self.fields, '%d')
-        f.write(b"\n")
-        f.close()
 
     def __repair_path(self):
         was_repair = False
@@ -159,17 +153,16 @@ class MapGen:
 
                 if self.fields[i][j] > 1:
                     if neighbours > 0:
-                        print("zmiana punktu", i, j, "na 1 bo teraz ma 2 i neighbours>0")
+                        # print("zmiana punktu", i, j, "na 1 bo teraz ma 2 i neighbours>0")
                         self.fields[i][j] = 1
                         was_repair = True
         return was_repair
 
     def __clear_maze(self):
         while self.__repair_path():
-            self.saveFieldsToFile()
+            pass
         while self.__remove_single_ones():
-            self.saveFieldsToFile()
-        # self.__remove_remaining_values()
+            pass
 
     def __add_border(self):
         tmp_arr = [[0 for x in range(self.size + 2)] for y in range(self.size + 2)]
@@ -186,7 +179,7 @@ class MapGen:
         self.fields = tmp_arr
 
     def __finish_maze(self):
-        print("maze ended")
+        # print("maze ended")
         self.fields[self.size - 1][self.size - 1] = 1
         self.__clear_maze()
         self.fields[0][0] = 2
@@ -194,21 +187,14 @@ class MapGen:
         self.__add_border()
 
     def generate_map(self, after_generate):
-        try:
-            os.remove(os.getcwd() + "\\logs.txt")
-        except FileNotFoundError:
-            pass
         while True:
             self.__get_possible_moves()
             self.__make_move()
-            self.saveFieldsToFile()
-            # numpy.savetxt() ("D:\\Projekty\\Python\\MouseRunner\\aa.txt", self.fields, '%d')
-            for i in self.fields:
-                print(i)
+            # for i in self.fields:
+            #     print(i)
             if self.__maze_ended():
                 break
         self.__finish_maze()
-        self.saveFieldsToFile()
-        for i in self.fields:
-            print(i)
+        # for i in self.fields:
+        #     print(i)
         after_generate(self.fields)
