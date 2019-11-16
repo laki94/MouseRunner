@@ -1,5 +1,4 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
-from aenum import enum
 
 from MapGenerator import MapGen
 from PyQt5.QtGui import QColor, QPainter, QFontMetrics
@@ -46,7 +45,10 @@ class Canvas(QtWidgets.QLabel):
                     painter.setBrush(QtGui.QBrush(Qt.green, Qt.SolidPattern))
                 painter.setPen(pen)
                 painter.drawRect(pointX, pointY, tile_size, tile_size)
-                self.__draw_narrow_spot(tiles, i, j, tile_size, pointX, pointY, painter)
+                if ((i == 2) and (j == 1)) or ((i == 1) and (j == 2)) or ((i == (len(tiles) - 2)) and (j == (len(tiles) - 3))) or ((i == (len(tiles) - 2)) and (j == (len(tiles) - 3))):
+                    pass
+                else:
+                    self.__draw_narrow_spot(tiles, i, j, tile_size, pointX, pointY, painter)
                 pointX = pointX + tile_size
             pointX = 0
             pointY = pointY + tile_size
@@ -204,11 +206,8 @@ class Map(QtWidgets.QMainWindow):
         tmp_tile_size = 0.1 - (((self.score + 1) // 3) / 100)
         if tmp_tile_size < 0.01:
             tmp_tile_size = 0.01
-        # if (self.score < 2) or ((self.score + 1) // 3 == (self.score // 3)):
-        #     self.generating_map_next = False
-        # else:
         print('generating next map')
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)))
+        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'NEXT')
         generated.generate_map(self.__after_generate_next_map_callback)
 
     def __generate_random_map_act(self):
@@ -220,7 +219,7 @@ class Map(QtWidgets.QMainWindow):
         elif self.tile_size > 0.1:
             self.tile_size = 0.1
         self.canvas.tile_size = self.tile_size
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * self.tile_size)))
+        generated = MapGen(round(MAPSIZE / (MAPSIZE * self.tile_size)), 'ACT')
         generated.generate_map(self.__after_generate_act_map_callback)
 
     def __generate_random_map_prev(self):
@@ -228,11 +227,8 @@ class Map(QtWidgets.QMainWindow):
         tmp_tile_size = 0.1 - (((self.score - 1) // 3) / 100)
         if tmp_tile_size > 0.1:
             tmp_tile_size = 0.1
-        # if ((self.score == 0) or (self.score - 1) // 3 == (self.score // 3)):
-        #     self.generating_map_prev = False
-        # else:
         print('generating prev map')
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)))
+        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'PREV')
         generated.generate_map(self.__after_generate_prev_map_callback)
 
     def __init_ui(self):
@@ -296,24 +292,26 @@ class Map(QtWidgets.QMainWindow):
             if (not self.generating_map_prev) and (len(self.prev_map_tiles) == 0):
                 threading.Thread(target=self.__generate_random_map_prev).start()
 
-            if self.generating_map_act or self.generating_map_prev or self.generating_map_next:
-                pass
-            else:
-                if self.game_won:
-                    print('game won')
-                    if (self.score // 3) == ((self.score - 1) // 3):
+            if self.game_won:
+                if (self.score // 3) == ((self.score - 1) // 3):
+                    if not self.generating_map_act:
                         self.__draw_act_map()
-                    else:
+                        self.game_won = False
+                else:
+                    if not self.generating_map_prev:
                         self.__draw_next_map()
-                    self.game_won = False
-                elif self.game_lost:
-                    print('game lost')
-                    if (self.score // 3) == ((self.score + 1) // 3):
+                        self.game_won = False
+            elif self.game_lost:
+                if (self.score // 3) == ((self.score + 1) // 3):
+                    if not self.generating_map_act:
                         self.__draw_act_map()
-                    else:
+                        self.game_lost = False
+                else:
+                    if not self.generating_map_next:
                         self.__draw_prev_map()
-                    self.game_lost = False
-                elif self.refresh_game:
+                        self.game_lost = False
+            elif self.refresh_game:
+                if not self.generating_map_act:
                     self.__draw_act_map()
                     self.refresh_game = False
 
@@ -328,7 +326,10 @@ class Map(QtWidgets.QMainWindow):
     def __set_start_pos_pointer(self):
         self.act_pos = (self.mapToGlobal(self.centralWidget().pos()).x() + self.canvas.pos().x() + round(MAPSIZE // len(self.map_tiles)),
                           self.mapToGlobal(self.centralWidget().pos()).y() + self.canvas.pos().y() + round(MAPSIZE // len(self.map_tiles)))
-        win32api.SetCursorPos(self.act_pos)
+        try:
+            win32api.SetCursorPos(self.act_pos)
+        except Exception:
+            pass
 
     def __set_score_text(self):
         self.setWindowTitle("MouseRunner - Wynik: %d" % self.score)
@@ -347,8 +348,8 @@ class Map(QtWidgets.QMainWindow):
         self.act_map_tiles = []
         self.canvas.draw_map(self.map_tiles)
         self.update()
-        time.sleep(1)
         self.__set_start_pos_pointer()
+        time.sleep(1)
         self.map_generated = True
         print('act map generated')
 
@@ -360,10 +361,11 @@ class Map(QtWidgets.QMainWindow):
         self.map_tiles = self.next_map_tiles
         self.next_map_tiles = []
         self.act_map_tiles = []
+        self.prev_map_tiles = []
         self.canvas.draw_map(self.map_tiles)
         self.update()
-        time.sleep(1)
         self.__set_start_pos_pointer()
+        time.sleep(1)
         self.map_generated = True
         print('next map generated')
 
@@ -373,12 +375,13 @@ class Map(QtWidgets.QMainWindow):
             print('prev map, waiting for generate')
             time.sleep(0.5)
         self.map_tiles = self.prev_map_tiles
-        self.prev_map_tiles = []
+        self.next_map_tiles = []
         self.act_map_tiles = []
+        self.prev_map_tiles = []
         self.canvas.draw_map(self.map_tiles)
         self.update()
-        time.sleep(1)
         self.__set_start_pos_pointer()
+        time.sleep(1)
         self.map_generated = True
         print('prev map generated')
 
@@ -415,6 +418,7 @@ class Map(QtWidgets.QMainWindow):
         self.refresh_game = True
 
     def __do_on_game_lost(self):
+        print('game lost')
         self.map_generated = False
         self.canvas.show_lost_map_info()
         if self.score > 0:
@@ -424,6 +428,7 @@ class Map(QtWidgets.QMainWindow):
         self.__set_score_text()
 
     def __do_on_game_won(self):
+        print('game won')
         self.map_generated = False
         self.canvas.show_won_map_info()
         self.score = self.score + 1
