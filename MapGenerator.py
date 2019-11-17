@@ -1,6 +1,4 @@
 import random
-import numpy
-import os
 
 
 class ETooManyIterations(Exception):
@@ -67,7 +65,7 @@ class MapGen:
 
     def __do_generate_maze(self):
         self.loop_count = self.loop_count + 1
-        if self.loop_count > 20000:
+        if self.loop_count > 30000:
             raise ETooManyIterations
         fields = self.__get_possible_moves()
         while len(fields) > 0:

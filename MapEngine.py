@@ -206,9 +206,12 @@ class Map(QtWidgets.QMainWindow):
         tmp_tile_size = 0.1 - (((self.score + 1) // 3) / 100)
         if tmp_tile_size < 0.01:
             tmp_tile_size = 0.01
-        print('generating next map')
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'NEXT')
-        generated.generate_map(self.__after_generate_next_map_callback)
+        if ((self.score + 1) // 3) == (self.score // 3):
+            self.generating_map_next = False
+        else:
+            print('generating next map')
+            generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'NEXT')
+            generated.generate_map(self.__after_generate_next_map_callback)
 
     def __generate_random_map_act(self):
         print('generating act map')
@@ -227,9 +230,12 @@ class Map(QtWidgets.QMainWindow):
         tmp_tile_size = 0.1 - (((self.score - 1) // 3) / 100)
         if tmp_tile_size > 0.1:
             tmp_tile_size = 0.1
-        print('generating prev map')
-        generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'PREV')
-        generated.generate_map(self.__after_generate_prev_map_callback)
+        if ((self.score - 1) // 3) == (self.score // 3):
+            self.generating_map_prev = False
+        else:
+            print('generating prev map')
+            generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'PREV')
+            generated.generate_map(self.__after_generate_prev_map_callback)
 
     def __init_ui(self):
         self.canvas = Canvas(self.tile_size)
@@ -294,24 +300,24 @@ class Map(QtWidgets.QMainWindow):
 
             if self.game_won:
                 if (self.score // 3) == ((self.score - 1) // 3):
-                    if not self.generating_map_act:
+                    if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
                         self.__draw_act_map()
                         self.game_won = False
                 else:
-                    if not self.generating_map_prev:
+                    if (not self.generating_map_next) and (len(self.next_map_tiles) > 0):
                         self.__draw_next_map()
                         self.game_won = False
             elif self.game_lost:
                 if (self.score // 3) == ((self.score + 1) // 3):
-                    if not self.generating_map_act:
+                    if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
                         self.__draw_act_map()
                         self.game_lost = False
                 else:
-                    if not self.generating_map_next:
+                    if (not self.generating_map_prev) and (len(self.prev_map_tiles) > 0):
                         self.__draw_prev_map()
                         self.game_lost = False
             elif self.refresh_game:
-                if not self.generating_map_act:
+                if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
                     self.__draw_act_map()
                     self.refresh_game = False
 
@@ -342,7 +348,7 @@ class Map(QtWidgets.QMainWindow):
     def __draw_act_map(self):
         print('drawing act map')
         while len(self.act_map_tiles) == 0:
-            print('act map, waiting for generate')
+            print('act map, waiting for generate, generating?=%s' % self.generating_map_act)
             time.sleep(0.5)
         self.map_tiles = self.act_map_tiles
         self.act_map_tiles = []
@@ -356,7 +362,7 @@ class Map(QtWidgets.QMainWindow):
     def __draw_next_map(self):
         print('drawing next map')
         while len(self.next_map_tiles) == 0:
-            print('next map, waiting for generate')
+            print('next map, waiting for generate, generating?=%s' % self.generating_map_next)
             time.sleep(0.5)
         self.map_tiles = self.next_map_tiles
         self.next_map_tiles = []
@@ -372,7 +378,7 @@ class Map(QtWidgets.QMainWindow):
     def __draw_prev_map(self):
         print('drawing previous map')
         while len(self.prev_map_tiles) == 0:
-            print('prev map, waiting for generate')
+            print('prev map, waiting for generate, generating?=%s' % self.generating_map_prev)
             time.sleep(0.5)
         self.map_tiles = self.prev_map_tiles
         self.next_map_tiles = []
