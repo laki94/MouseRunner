@@ -60,7 +60,7 @@ class Canvas(QtWidgets.QLabel):
         top = False
         bot = False
         nb = 0
-        if tiles[i][j] == 1 and (tile_size > 15):  # TODO przeniesc do funkcji
+        if tiles[i][j] == 1 and (tile_size > 15):
             rand_int = random.randint(0, 100)
             if rand_int < 20:
                 if (j < len(tiles) - 2) and (tiles[i][j + 1] == 1):
@@ -237,6 +237,26 @@ class Map(QtWidgets.QMainWindow):
             generated = MapGen(round(MAPSIZE / (MAPSIZE * tmp_tile_size)), 'PREV')
             generated.generate_map(self.__after_generate_prev_map_callback)
 
+    def __init_intro_ui(self):
+        self.setWindowTitle('MouseRunner')
+        self.l = QtWidgets.QGridLayout()
+        w = QtWidgets.QWidget()
+        w.setLayout(self.l)
+        btn = QtWidgets.QPushButton()
+        btn.setText('Graj')
+        btn.clicked.connect(self.on_start_click)
+        self.l.addWidget(btn, 1, 0)
+
+        btn = QtWidgets.QPushButton()
+        btn.setText('Wyjdź')
+        btn.clicked.connect(self.on_exit_click)
+        self.l.addWidget(btn, 1, 2)
+
+        label = QtWidgets.QLabel()
+        label.setText('Gra MouseRunner, polegająca na poruszaniu się kursorem po losowo wygenerowanej mapie')
+        self.l.addWidget(label, 0, 1)
+        self.setCentralWidget(w)
+
     def __init_ui(self):
         self.canvas = Canvas(self.tile_size)
         self.l = QtWidgets.QVBoxLayout()
@@ -245,6 +265,7 @@ class Map(QtWidgets.QMainWindow):
         self.l.addWidget(self.canvas)
         self.setCentralWidget(w)
         w.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        self.update()
 
     def __del__(self):
         print('destroying MapEngine')
@@ -270,8 +291,7 @@ class Map(QtWidgets.QMainWindow):
         self.next_map_tiles = []
         self.prev_map_tiles = []
         self.tile_size = 0.1
-        self.__init_ui()
-        self.canvas.show_loading_map_info()
+        self.__init_intro_ui()
         self.setMouseTracking(True)
         self.score = 0
         self.prev_dist = 0
@@ -281,11 +301,31 @@ class Map(QtWidgets.QMainWindow):
         self.map_generated = False
         self.timer = QTimer()
         self.timer.timeout.connect(self.__on_timer_tick)
-        self.timer.start(1000)
         self.game_won = False
         self.game_lost = False
         self.refresh_game = False
         self.destroying = False
+        self.waited_for_sec = False
+
+    def show(self):
+        super(Map, self).show()
+        self.__center()
+
+    def on_exit_click(self):
+        self.close()
+
+    def on_start_click(self):
+        self.__init_ui()
+        frame_gm = self.frameGeometry()
+        screen = PyQt5.QtWidgets.QApplication.desktop().screenNumber(
+            PyQt5.QtWidgets.QApplication.desktop().cursor().pos())
+        center_point = PyQt5.QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+        frame_gm.moveCenter(center_point)
+        self.move(frame_gm.left(), frame_gm.top() - (MAPSIZE // 2))
+        self.window_pos = self.pos()
+        self.canvas.show_loading_map_info()
+        self.timer.start(1000)
+        self.__first_game()
 
     def __on_timer_tick(self):
         if self.destroying:
@@ -299,27 +339,41 @@ class Map(QtWidgets.QMainWindow):
                 threading.Thread(target=self.__generate_random_map_prev).start()
 
             if self.game_won:
-                if (self.score // 3) == ((self.score - 1) // 3):
-                    if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
-                        self.__draw_act_map()
-                        self.game_won = False
+                if self.waited_for_sec:
+                    if (self.score // 3) == ((self.score - 1) // 3):
+                        if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
+                            self.__draw_act_map()
+                            self.game_won = False
+                            self.waited_for_sec = False
+                    else:
+                        if (not self.generating_map_next) and (len(self.next_map_tiles) > 0):
+                            self.__draw_next_map()
+                            self.game_won = False
+                            self.waited_for_sec = False
                 else:
-                    if (not self.generating_map_next) and (len(self.next_map_tiles) > 0):
-                        self.__draw_next_map()
-                        self.game_won = False
+                    self.waited_for_sec = True
             elif self.game_lost:
-                if (self.score // 3) == ((self.score + 1) // 3):
+                if self.waited_for_sec:
+                    if (self.score // 3) == ((self.score + 1) // 3):
+                        if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
+                            self.__draw_act_map()
+                            self.game_lost = False
+                            self.waited_for_sec = False
+                    else:
+                        if (not self.generating_map_prev) and (len(self.prev_map_tiles) > 0):
+                            self.__draw_prev_map()
+                            self.game_lost = False
+                            self.waited_for_sec = False
+                else:
+                    self.waited_for_sec = True
+            elif self.refresh_game:
+                if self.waited_for_sec:
                     if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
                         self.__draw_act_map()
-                        self.game_lost = False
+                        self.refresh_game = False
+                        self.waited_for_sec = False
                 else:
-                    if (not self.generating_map_prev) and (len(self.prev_map_tiles) > 0):
-                        self.__draw_prev_map()
-                        self.game_lost = False
-            elif self.refresh_game:
-                if (not self.generating_map_act) and (len(self.act_map_tiles) > 0):
-                    self.__draw_act_map()
-                    self.refresh_game = False
+                    self.waited_for_sec = True
 
     def __center(self):
         frame_gm = self.frameGeometry()
@@ -343,7 +397,6 @@ class Map(QtWidgets.QMainWindow):
     def __first_game(self):
         self.__set_score_text()
         self.refresh_game = True
-        # self.__draw_act_map()
 
     def __draw_act_map(self):
         print('drawing act map')
@@ -355,7 +408,6 @@ class Map(QtWidgets.QMainWindow):
         self.canvas.draw_map(self.map_tiles)
         self.update()
         self.__set_start_pos_pointer()
-        time.sleep(1)
         self.map_generated = True
         print('act map generated')
 
@@ -371,7 +423,6 @@ class Map(QtWidgets.QMainWindow):
         self.canvas.draw_map(self.map_tiles)
         self.update()
         self.__set_start_pos_pointer()
-        time.sleep(1)
         self.map_generated = True
         print('next map generated')
 
@@ -387,15 +438,8 @@ class Map(QtWidgets.QMainWindow):
         self.canvas.draw_map(self.map_tiles)
         self.update()
         self.__set_start_pos_pointer()
-        time.sleep(1)
         self.map_generated = True
         print('prev map generated')
-
-    def show(self):
-        super(Map, self).show()
-        self.window_pos = self.pos()
-        self.__center()
-        self.__first_game()
 
     def __did_pointer_jump(self, pos):
         try:
